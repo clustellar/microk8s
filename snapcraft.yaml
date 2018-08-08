@@ -31,7 +31,7 @@ apps:
     command: run-with-config-args kube-proxy
     daemon: simple
   kubectl:
-    command: kubectl --kubeconfig=$SNAP/client.config
+    command: kubectl --kubeconfig=${SNAP_DATA}/credentials/client.config
   docker:
     command: microk8s-docker.wrapper
   enable:
@@ -93,6 +93,9 @@ parts:
     - file
     stage-packages:
     - util-linux
+    - libssl1.0.0
+    - openssl
+    - coreutils
     source: .
     override-build: |
       set -eu
@@ -108,7 +111,7 @@ parts:
       cp -r $KUBE_SNAP_ROOT/microk8s-resources/default-args .
 
       echo "Building certs"
-      build-scripts/build-certs.sh
+      cp -r $KUBE_SNAP_ROOT/microk8s-resources/certs .
       cp -r $KUBE_SNAP_ROOT/microk8s-resources/certs-beta .
 
       echo "Preparing cni"
@@ -124,7 +127,9 @@ parts:
 
       echo "Preparing kube-apiserver"
       cp $KUBE_SNAP_BINS/$KUBE_ARCH/kube-apiserver .
-      cp $KUBE_SNAP_ROOT/microk8s-resources/known_token.csv .
+      # Old versions will be pointing to these .csv files from inside their kube-apiserver config
+      # Keep them around for a couple of releases.
+      touch known_token.csv
       cp $KUBE_SNAP_ROOT/microk8s-resources/basic_auth.csv .
 
       echo "Preparing kube-controller-manager"
@@ -147,6 +152,7 @@ parts:
 
       echo "Preparing user config"
       cp $KUBE_SNAP_ROOT/microk8s-resources/client.config .
+      cp $KUBE_SNAP_ROOT/microk8s-resources/client.config.template .
 
       echo "Preparing istio"
       cp $KUBE_SNAP_BINS/istioctl .
